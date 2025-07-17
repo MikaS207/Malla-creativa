@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Malla Curricular Interactiva</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .search-box {
+      max-width: 400px;
+      margin: 0 auto 20px;
+      display: flex;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .malla {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .curso {
+      background: #fff;
+      padding: 10px;
+      border-left: 5px solid #2c3e50;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .curso[data-area*="Finanzas"] { border-left-color: #27ae60; }
+    .curso[data-area*="Marketing"] { border-left-color: #e67e22; }
+    .curso[data-area*="Contabilidad"] { border-left-color: #9b59b6; }
+    .curso[data-area*="Investigación"] { border-left-color: #f39c12; }
+    .curso[data-area*="Operaciones"] { border-left-color: #1abc9c; }
+    .curso[data-area*="Legal"] { border-left-color: #c0392b; }
+    .curso[data-area*="Electivo"] { border-left-color: #95a5a6; }
+    .curso:hover {
+      background-color: #ecf0f1;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      width: 350px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      z-index: 999;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 998;
+    }
+    .close {
+      float: right;
+      cursor: pointer;
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .ciclo {
+      grid-column: span 6;
+      background: #2980b9;
+      color: white;
+      padding: 5px 10px;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>Malla Curricular Interactiva</h1>
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="Buscar curso o requisito...">
+</div>
+<div class="malla" id="contenedorMalla"></div>
+
+<div class="overlay" onclick="cerrarModal()"></div>
+<div class="modal" id="modal">
+  <span class="close" onclick="cerrarModal()">×</span>
+  <h3 id="nombreCurso"></h3>
+  <p><strong>Requisitos:</strong> <span id="requisitosCurso"></span></p>
+</div>
+
+<script>
+const cursos = [
+  { ciclo: 0, nombre: "Nivelación de Lenguaje", requisitos: "No tiene requisitos", area: "Lenguaje" },
+  { ciclo: 0, nombre: "Nivelación de Matemática", requisitos: "No tiene requisitos", area: "Matemática" },
+  { ciclo: 1, nombre: "Introduction to International Business", requisitos: "No tiene requisitos", area: "Negocios" },
+  { ciclo: 1, nombre: "International Management", requisitos: "No tiene requisitos", area: "Negocios" },
+  { ciclo: 1, nombre: "Ética y Ciudadanía", requisitos: "Se requiere Nivelación de Lenguaje", area: "Ética" },
+  { ciclo: 1, nombre: "Comprensión y Producción de Lenguaje I", requisitos: "Se requiere Nivelación de Lenguaje", area: "Lenguaje" },
+  { ciclo: 1, nombre: "Fundamentos para el Cálculo", requisitos: "Se requiere Nivelación de Matemática", area: "Matemática" },
+  { ciclo: 2, nombre: "Fundamentos de las Finanzas", requisitos: "Se requiere Nivelación de Matemática", area: "Finanzas" },
+  { ciclo: 2, nombre: "Macroeconomía", requisitos: "Se requieren International Management y Fundamentos para el Cálculo", area: "Economía" },
+  { ciclo: 2, nombre: "Inteligencia Comercial Internacional", requisitos: "Se requiere Introduction to International Business", area: "Negocios" },
+  { ciclo: 2, nombre: "Mundo Empresarial y Realidad Socioeconómica", requisitos: "Se requiere International Management", area: "Negocios" },
+  { ciclo: 2, nombre: "Comprensión y Producción de Lenguaje II", requisitos: "Se requiere Comprensión y Producción de Lenguaje I", area: "Lenguaje" },
+  { ciclo: 2, nombre: "Cálculo", requisitos: "Se requiere Fundamentos para el Cálculo", area: "Matemática" },
+  { ciclo: 2, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 3, nombre: "Matemática Financiera", requisitos: "Se requiere Fundamentos de las Finanzas", area: "Finanzas" },
+  { ciclo: 3, nombre: "Teoría Microeconómica", requisitos: "Se requieren Macroeconomía y Fundamentos para el Cálculo", area: "Economía" },
+  { ciclo: 3, nombre: "International Business", requisitos: "Se requiere Introduction to International Business", area: "Negocios" },
+  { ciclo: 3, nombre: "Introducción a la Contabilidad Financiera", requisitos: "Se requiere Fundamentos de las Finanzas", area: "Contabilidad" },
+  { ciclo: 3, nombre: "Fundamentos de la Investigación Académica", requisitos: "Se requiere Comprensión y Producción de Lenguaje II", area: "Investigación" },
+  { ciclo: 3, nombre: "Estadística Descriptiva", requisitos: "Se requiere Cálculo", area: "Matemática" },
+  { ciclo: 4, nombre: "Finanzas Corporativas", requisitos: "Se requieren Matemática Financiera y Introducción a la Contabilidad Financiera", area: "Finanzas" },
+  { ciclo: 4, nombre: "Marketing", requisitos: "Se requiere Teoría Microeconómica", area: "Marketing" },
+  { ciclo: 4, nombre: "Comercio Internacional", requisitos: "Se requieren Introduction to International Business y Teoría Microeconómica", area: "Negocios" },
+  { ciclo: 4, nombre: "International Economy", requisitos: "Se requieren Mundo Empresarial y Realidad Socioeconómica y International Business", area: "Economía" },
+  { ciclo: 4, nombre: "Introducción a la Contabilidad Gerencial", requisitos: "Se requiere Introducción a la Contabilidad Financiera", area: "Contabilidad" },
+  { ciclo: 4, nombre: "Estadística Inferencial", requisitos: "Se requiere Estadística Descriptiva", area: "Matemática" },
+  { ciclo: 4, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 5, nombre: "Diseño Organizacional y Procesos", requisitos: "Se requiere Introduction to International Business", area: "Negocios" },
+  { ciclo: 5, nombre: "Gestión del Capital Humano Global", requisitos: "Se requiere International Management", area: "Negocios" },
+  { ciclo: 5, nombre: "Aduanas", requisitos: "Se requiere Comercio Internacional", area: "Negocios" },
+  { ciclo: 5, nombre: "Plan Comercial Internacional", requisitos: "Se requieren Inteligencia Comercial Internacional, Marketing y Comercio Internacional", area: "Negocios" },
+  { ciclo: 5, nombre: "Métodos Cuantitativos", requisitos: "Se requiere Estadística Descriptiva", area: "Matemática" },
+  { ciclo: 5, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 6, nombre: "Grandes Ideas en Gerencia", requisitos: "Se requieren Marketing y Gestión del Capital Humano Global", area: "Negocios" },
+  { ciclo: 6, nombre: "Administración de Operaciones", requisitos: "Se requiere Métodos Cuantitativos", area: "Operaciones" },
+  { ciclo: 6, nombre: "Costos y Cotizaciones Internacionales", requisitos: "Se requieren Plan Comercial Internacional y Comercio Internacional", area: "Contabilidad" },
+  { ciclo: 6, nombre: "Análisis e Interpretación de EE.FF.", requisitos: "Se requiere Introducción a la Contabilidad Gerencial", area: "Contabilidad" },
+  { ciclo: 6, nombre: "Derecho Empresarial y de Comercio Internacional", requisitos: "Se requiere Aduanas", area: "Legal" },
+  { ciclo: 6, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 7, nombre: "Comunicación para el Liderazgo", requisitos: "80 créditos", area: "Lenguaje" },
+  { ciclo: 7, nombre: "Evaluación de Proyectos de Inversión Privada", requisitos: "Se requiere Finanzas Corporativas", area: "Finanzas" },
+  { ciclo: 7, nombre: "Comportamiento Organizacional", requisitos: "Se requiere Gestión del Capital Humano Global", area: "Negocios" },
+  { ciclo: 7, nombre: "Investigación de Mercado Aplicada a los Negocios", requisitos: "Se requieren Estadística Inferencial y Marketing", area: "Marketing" },
+  { ciclo: 7, nombre: "E-Commerce", requisitos: "Se requiere Plan Comercial Internacional", area: "Marketing" },
+  { ciclo: 7, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 8, nombre: "Gestión de Proyectos", requisitos: "Se requiere Administración de Operaciones", area: "Operaciones" },
+  { ciclo: 8, nombre: "Sistemas de Información en Ent. Digitales", requisitos: "Se requiere Administración de Operaciones", area: "Operaciones" },
+  { ciclo: 8, nombre: "Operaciones Financieras Internacionales", requisitos: "Se requieren Costos y Cotizaciones Internacionales y Finanzas Corporativas", area: "Finanzas" },
+  { ciclo: 8, nombre: "Integración Económica Internacional", requisitos: "Se requiere Derecho Empresarial y de Comercio Internacional", area: "Economía" },
+  { ciclo: 8, nombre: "Transporte Global", requisitos: "Se requieren Comercio Internacional y Plan Comercial Internacional", area: "Operaciones" },
+  { ciclo: 8, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 9, nombre: "Metodología de la Investigación", requisitos: "Requisito de créditos", area: "Investigación" },
+  { ciclo: 9, nombre: "Gerencia Estratégica en Org. Conscientes", requisitos: "104 créditos", area: "Negocios" },
+  { ciclo: 9, nombre: "Gerencia Comercial Multinacional", requisitos: "Se requieren Costos y Cotizaciones Internacionales, Integración Económica Internacional y Plan Comercial Internacional", area: "Negocios" },
+  { ciclo: 9, nombre: "Desarrollo de Proyectos Internacionales", requisitos: "Se requieren Investigación de Mercado Aplicada a los Negocios, E-Commerce, Costos y Cotizaciones Internacionales, Transporte Global y Evaluación de Proyectos de Inversión Privada", area: "Negocios" },
+  { ciclo: 9, nombre: "International Supply Chain Management", requisitos: "140 créditos", area: "Operaciones" },
+  { ciclo: 9, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 10, nombre: "Ética y Responsabilidad Social Empresarial", requisitos: "140 créditos", area: "Ética" },
+  { ciclo: 10, nombre: "Dirección Multinacional", requisitos: "160 créditos", area: "Negocios" },
+  { ciclo: 10, nombre: "Curso de Trabajo de Investigación - Seminario de Tesis", requisitos: "Se requiere Metodología de la Investigación", area: "Investigación" },
+  { ciclo: 10, nombre: "Coyuntura Internacional", requisitos: "160 créditos", area: "Negocios" },
+  { ciclo: 10, nombre: "Electivo", requisitos: "", area: "Electivo" },
+  { ciclo: 10, nombre: "Electivo", requisitos: "", area: "Electivo" }
+];
+
+function generarMalla() {
+  const contenedor = document.getElementById("contenedorMalla");
+  contenedor.innerHTML = "";
+  let cicloActual = -1;
+  cursos.forEach(curso => {
+    if (curso.ciclo !== cicloActual) {
+      cicloActual = curso.ciclo;
+      const tituloCiclo = document.createElement("div");
+      tituloCiclo.className = "ciclo";
+      tituloCiclo.textContent = `Ciclo ${cicloActual}`;
+      contenedor.appendChild(tituloCiclo);
+    }
+    const div = document.createElement("div");
+    div.className = "curso";
+    div.textContent = curso.nombre;
+    div.setAttribute("data-nombre", curso.nombre.toLowerCase());
+    div.setAttribute("data-requisitos", curso.requisitos.toLowerCase());
+    div.setAttribute("data-area", curso.area);
+    div.onclick = () => mostrarDetalle(curso.nombre, curso.requisitos);
+    contenedor.appendChild(div);
+  });
+}
+
+document.getElementById("searchInput").addEventListener("input", () => {
+  const term = document.getElementById("searchInput").value.toLowerCase();
+  document.querySelectorAll(".curso").forEach(curso => {
+    const nombre = curso.getAttribute("data-nombre");
+    const requisitos = curso.getAttribute("data-requisitos");
+    curso.style.display = (nombre.includes(term) || requisitos.includes(term)) ? "block" : "none";
+  });
+});
+
+generarMalla();
+
+function mostrarDetalle(nombre, requisitos) {
+  document.getElementById("nombreCurso").textContent = nombre;
+  document.getElementById("requisitosCurso").textContent = requisitos;
+  document.querySelector(".overlay").style.display = "block";
+  document.getElementById("modal").style.display = "block";
+}
+
+function cerrarModal() {
+  document.querySelector(".overlay").style.display = "none";
+  document.getElementById("modal").style.display = "none";
+}
+</script>
+
+</body>
+</html>
